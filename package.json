@@ -1,0 +1,11 @@
+{
+  "name": "perrig-randomart",
+  "version": "1.0.0",
+  "description": "an implimentation of the randomart generator by proposed by Perrig and Song 1999",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "James Oswald",
+  "license": "MIT"
+}
