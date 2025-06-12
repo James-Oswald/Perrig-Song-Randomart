@@ -2,9 +2,13 @@
     "cSpell.words": [
         "GLSL",
         "highp",
+        "offscreencanvas",
         "perrig",
         "randomart",
         "seedable",
         "tsoding"
-    ]
+    ],
+    "editor.rulers": [
+        80
+    ],
 }

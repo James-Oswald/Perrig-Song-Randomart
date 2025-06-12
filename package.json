@@ -1,14 +1,13 @@
 {
-  "name": "perrig-randomart",
-  "version": "1.0.0",
-  "description": "an implimentation of the randomart generator by proposed by Perrig and Song 1999",
-  "main": "index.js",
-  "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "author": "James Oswald",
+  "name": "perrig-song-randomart",
+  "version": "0.1.0",
+  "keywords": ["randomart", "tsoding"],
+  "description": "A web implementation of the randomart generator proposed by Perrig and Song 1999",
+  "types": "dist/index.d.ts",
+  "browser": "dist/index.js",
+  "author": "James T. Oswald",
   "license": "MIT",
-  "dependencies": {
+  "devDependencies": {
     "@types/offscreencanvas": "^2019.7.3"
   }
 }

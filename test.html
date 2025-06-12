@@ -9,16 +9,31 @@
         import { randomart } from './dist/index.js';
 
         document.addEventListener('DOMContentLoaded', () => {
-            const canvas = document.getElementById('artCanvas');
-            const ctx = canvas.getContext('2d');
-            const bitmap = randomart("hello");
-            ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-            bitmap.close();
-            console.info("Random art generated and drawn on canvas.");
+            const input = document.getElementById('inputText');
+            const range = document.getElementById('inputRange');
+            const canvas1 = document.getElementById('artCanvas1');
+            const ctx1 = canvas1.getContext('2d');
+            const canvas2 = document.getElementById('artCanvas2');
+            const ctx2 = canvas2.getContext('2d');
+            console.info("Input element found, setting up event listener.");
+            input.addEventListener('input', (event) => {
+                console.info("Input changed, generating random art.");
+                const bitmap1 = randomart(canvas1.width, canvas1.height, input.value, range.value, "perrig");
+                ctx1.drawImage(bitmap1, 0, 0, canvas1.width, canvas1.height);
+                const bitmap2 = randomart(canvas2.width, canvas2.height, input.value, range.value, "tsoding");
+                ctx2.drawImage(bitmap2, 0, 0, canvas2.width, canvas2.height);
+                bitmap1.close();
+                bitmap2.close();
+                console.info("Random art generated and drawn on canvas.");
+            });
         });
     </script>
 </head>
 <body>
-    <canvas id="artCanvas" width="500" height="500"></canvas>
+    <canvas id="artCanvas1" width="500" height="500"></canvas>
+    <canvas id="artCanvas2" width="500" height="500"></canvas>
+    <br/>
+    <input type="text" id="inputText" value="adc" placeholder="Enter text for random art"/>
+    <input type="range" id="inputRange" min="1" max="30" value="15"/>
 </body>
 </html>

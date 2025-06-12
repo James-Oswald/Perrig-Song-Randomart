@@ -1,10 +1,24 @@
+/**
+ * @author James T. Oswald 
+ * @license MIT
+ * @description Randomart generation library:
+ * This library generates a image randomart based on a grammar and a seed string.
+ * It uses WebGL to render the generated art to an image bitmap.
+ * The grammar is defined in a way that allows for recursive definitions,
+ * and the generated art can be customized by changing the seed string and
+ * the complexity of the generated art.
+ * The grammar is based on the Perrig Song 1999 paper and
+ * the TSoding's implementation of Perrig-Song.
+ */
 
-// Grammar code =======================================================================================================
+// Grammar code ===============================================================
 
 type RuleMember = {
     name: string | "a" | "x" | "y";
     // If this is empty, the member is a terminal.
-    // otherwise if this is non empty, it is a composite rule treated as a function, the function takes the arguments specified in args_types
+    // otherwise if this is non empty, it is a composite rule treated as 
+    // a function, the function takes
+    // the arguments specified in args_types
     // and it expects a GLSL function defined to handle it. 
     args_types: string[];
     weight: number;
@@ -92,7 +106,7 @@ function tsoding_grammar() : Grammar {
     return grammar;
 }
 
-// Random number gen utility functions ================================================================================
+// Random number gen utility functions =========================================
 
 function hashStringToU32(str: string): number {
   let hash = 0;
@@ -106,7 +120,8 @@ function hashStringToU32(str: string): number {
   return hash >>> 0;
 }
 
-// It is important that each string generates the same unique sequence numbers fo we get the same random art each time.
+// It is important that each string generates the same unique sequence numbers
+// so we get the same random art each time.
 // Mulberry32 seedable random number generator
 // https://gist.github.com/tommyettinger/46a874533244883189143505d203312c
 function mulberry32(seed : string) : () => number {
@@ -143,7 +158,7 @@ function random_float(min: number, max: number, rng: () => number): number {
     return rng() * (max - min) + min;
 }
 
-// GLSL code ==========================================================================================================
+// GLSL code ===================================================================
 
 let vertex_shader_code : string = `
 #version 100
@@ -162,23 +177,23 @@ let frag_shader_template : string = `
 precision highp float;
 
 float get_x() {
-    return gl_FragCoord.x;
+    return gl_FragCoord.x*2.0 - 1.0;
 }
 
 float get_y() {
-    return gl_FragCoord.y;
+    return gl_FragCoord.y*2.0 - 1.0;
 }
 
 float get_abs_x() {
-    return abs(gl_FragCoord.x);
+    return abs(gl_FragCoord.x*2.0 - 1.0);
 }
 
 float get_abs_y() {
-    return abs(gl_FragCoord.y);
+    return abs(gl_FragCoord.y*2.0 - 1.0);
 }
 
 float get_distance() {
-    return length(vec2(gl_FragCoord.x, gl_FragCoord.y));
+    return length(vec2(gl_FragCoord.x*2.0 - 1.0, gl_FragCoord.y*2.0 - 1.0));
 }
 
 float add(float a, float b) {
@@ -206,8 +221,12 @@ void main() {
 }
 `
 
-function createShader(gl : WebGL2RenderingContext , sourceCode : string, type : GLenum) : WebGLShader {
-    // Compiles either a shader of type gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
+// Compiles either a shader of type gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
+function createShader(
+    gl : WebGLRenderingContext,
+    sourceCode : string, 
+    type : GLenum
+) : WebGLShader {
     const shader = gl.createShader(type);
     if (!shader) {
         throw new Error("Failed to create shader.");
@@ -221,11 +240,13 @@ function createShader(gl : WebGL2RenderingContext , sourceCode : string, type : 
     return shader;
 }
 
-// Randomart Generation ==================================================================================================
+// Randomart Generation ========================================================
 
-// Given a fragment shader, generate an image bitmap from it, on a fullscreen quad of a given size.
-function genImage(frag_shader_code : string, x : number, y : number) : ImageBitmap {
-    let canvas : OffscreenCanvas = new OffscreenCanvas(424, 600);
+// Given a fragment shader, generate an image bitmap from it, on a fullscreen 
+// quad of a given size.
+function genImage(frag_shader_code : string, x : number, y : number) 
+: ImageBitmap  {
+    let canvas : OffscreenCanvas = new OffscreenCanvas(x, y);
     let gl = canvas.getContext("webgl2");
     if (!gl) {
         throw new Error("WebGL2 context not available.");
@@ -249,6 +270,7 @@ function genImage(frag_shader_code : string, x : number, y : number) : ImageBitm
         1.0,  1.0, -1.0,  1.0, -1.0, -1.0,
         -1.0, -1.0, 1.0, -1.0, 1.0,  1.0
     ];
+    gl.bindBuffer(gl.ARRAY_BUFFER, fullscreen_quad_vbo);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fullscreen_quad), gl.STATIC_DRAW);
     let position_attribute = gl.getAttribLocation(shader_program, "position")
 
@@ -264,7 +286,7 @@ function genImage(frag_shader_code : string, x : number, y : number) : ImageBitm
 }
 
 
-// Given the grammar G and a depth parameter, generate a GLSL shader. 
+// Given the grammar and a depth parameter, generate a GLSL shader. 
 function randomart_aux(g: Grammar, i : string, d: number, rng : () => number): string {
     let r = g.rules.get(i)
     let A = g.rules.get("A");
@@ -281,12 +303,35 @@ function randomart_aux(g: Grammar, i : string, d: number, rng : () => number): s
     }
 }
 
-export function randomart(seed: string) : ImageBitmap {
-    let g = tsoding_grammar(); // or perrig_grammar() for the Perrig grammar
+/**
+ * 
+ * @param x the width of the randomart image in pixels
+ * @param y the height of the randomart image in pixels
+ * @param depth The "complexity" of the randomart, default to 15. WARNING: this
+ * is an exponential parameter, higher values will cause potentially very long
+ * generation times, and have a know issue corrupting WebGL on Firefox, requiring
+ * a browser restart.
+ * @param seed The seed string used to generate the random art,
+ * default to "default".
+ * @param grammar The grammar to use for generating the randomart, either
+ * "perrig" or "tsoding". Default to "perrig".
+ * @returns A randomart image bitmap, can be drawn to a canvas.
+ */
+export function randomart(
+    x : number,
+    y : number,
+    seed: string = "default",
+    depth : number = 15,
+    grammar : "perrig" | "tsoding" = "perrig",
+    debug : boolean = false
+) : ImageBitmap {
+    let g = grammar == "tsoding" ? tsoding_grammar() : perrig_grammar();
     let rng = mulberry32(seed);
-    let depth = random_int(5, 10, rng); // Random depth between 5 and 10
     let expression = randomart_aux(g, g.expression, depth, rng);
+    if (debug) {
+        console.info("Randomart expression used for generation:", expression);
+    }
     let glsl_code = frag_shader_template.replace("EXPRESSION", expression);
-    let image = genImage(glsl_code, 424, 600);
+    let image = genImage(glsl_code, x, y);
     return image;
 }

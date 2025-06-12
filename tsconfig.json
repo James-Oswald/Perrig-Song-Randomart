@@ -9,7 +9,7 @@
         "declaration": true,
         "sourceMap": true
     },
-    "include": ["*.ts"],
+    "include": ["src/index.ts"],
     "exclude": ["node_modules", "dist"],
     "lib": [
         "ES2020",
