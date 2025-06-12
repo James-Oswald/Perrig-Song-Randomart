@@ -1,0 +1,19 @@
+{
+  "name": "perrig-song-randomart",
+  "version": "0.2.2",
+  "readme": "README.md",
+  "homepage": "https://github.com/James-Oswald/Perrig-Song-Randomart",
+  "keywords": ["randomart", "tsoding"],
+  "description": "A browser implementation of the randomart generator proposed by Perrig and Song's 1999 paper 'Hash Visualization: a New Technique to improve Real-World Security'.",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc --project tsconfig.json",
+    "serve": "python3 -m http.server 8000"
+  },
+  "browser": "dist/index.js",
+  "author": "James T. Oswald",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/offscreencanvas": "^2019.7.3"
+  }
+}
