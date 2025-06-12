@@ -15,7 +15,7 @@ Try it out on [The Example Deployment](https://james-oswald.github.io/Perrig-Son
 ## Use
 
 The core function of the library is a single function `randomart`, which
-given an image size, string seed, and a slew of other optional parameters will generate an (ImageBitmap)[https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap] that can then be drawn to a canvas and from there turned into an image data object or saved etc.
+given an image size, string seed, and a slew of other optional parameters will generate an [ImageBitmap](https://developer.mozilla.org/en-US/docs/Web/API/ImageBitmap) that can then be drawn to a canvas and from there turned into an image data object or saved etc.
 
 From [the example website](https://github.com/James-Oswald/Perrig-Song-Randomart/blob/main/index.html)
 ```js
