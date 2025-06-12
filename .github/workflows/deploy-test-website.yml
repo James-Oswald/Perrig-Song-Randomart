@@ -19,20 +19,21 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Build the project
-        run: npm run build
-      
-      - name: Check for the existence of the build directory
+      - name: create deployment directory
         run: |
-          if [ ! -d "dist" ]; then
-            echo "Build directory 'dist' does not exist. Exiting."
-            exit 1
-          fi
+          mkdir -p public
+          mkdir -p public/dist
+
+      - name: Copy files to deployment directory
+        run: cp index.html public
+
+      - name: Build the project
+        run: tsc --project tsconfig.json --outDir public/dist
         
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: ./public
           allow_empty_commit: true
           exclude_assets: ''
