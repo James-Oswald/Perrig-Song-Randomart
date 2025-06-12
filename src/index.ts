@@ -212,16 +212,16 @@ let frag_shader_template : string = `
 
 precision highp float;
 uniform vec2 resolution;
+uniform float scale;
 
 #define M_PI 3.1415926535897932384626433832795
-#define SCALE 2.0
 
 float get_x() {
-    return (gl_FragCoord.x/resolution.x)*2.0*SCALE - SCALE;
+    return (gl_FragCoord.x/resolution.x)*2.0*scale - scale;
 }
 
 float get_y() {
-    return (gl_FragCoord.y/resolution.y)*2.0*SCALE - SCALE;
+    return (gl_FragCoord.y/resolution.y)*2.0*scale - scale;
 }
 
 float get_abs_x() {
@@ -307,8 +307,12 @@ const context_cache = new Map<string, WebGL2RenderingContext>();
 
 // Given a fragment shader, generate an image bitmap from it, on a fullscreen 
 // quad of a given size.
-function draw_image(frag_shader_code : string, x : number, y : number) 
-: ImageBitmap  {
+function draw_image(
+    frag_shader_code : string,
+    x : number,
+    y : number, 
+    scale : number
+) : ImageBitmap  {
     if (x <= 0 || y <= 0) {
         throw new Error("Width and height must be positive integers.");
     }
@@ -349,6 +353,7 @@ function draw_image(frag_shader_code : string, x : number, y : number)
         throw `Could not compile WebGL program. \n\n${info}`;
     }
     const resolution_uniform = gl.getUniformLocation(shader_program, "resolution");
+    const scale_uniform = gl.getUniformLocation(shader_program, "scale");
     if (!resolution_uniform) {
         throw new Error("Could not find resolution uniform in shader program.");
     }
@@ -367,6 +372,7 @@ function draw_image(frag_shader_code : string, x : number, y : number)
     gl.enableVertexAttribArray(position_attribute);
     gl.vertexAttribPointer(position_attribute, 2, gl.FLOAT, false, 0, 0);
     gl.uniform2f(resolution_uniform, canvas.width, canvas.height);
+    gl.uniform1f(scale_uniform, scale);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     return canvas.transferToImageBitmap();
@@ -394,22 +400,24 @@ function randomart_aux(g: Grammar, i : string, d: number, rng : () => number): s
  * Generates a randomart image bitmap of given a width, height, depth, and seed.
  * @param x the width of the randomart image in pixels
  * @param y the height of the randomart image in pixels
+ * @param seed The seed string used to generate the random art,
+ * default to "default".
+ * @param grammar_name The grammar to use for generating the randomart, either
+ * "perrig", "tsoding", or "oswald". Default to "tsoding".
  * @param depth The "complexity" of the randomart, default to 15. WARNING: this
  * is an exponential parameter, higher values will cause potentially very long
  * generation times, and have a know issue corrupting WebGL on Firefox, requiring
  * a browser restart.
- * @param seed The seed string used to generate the random art,
- * default to "default".
- * @param grammar The grammar to use for generating the randomart, either
- * "perrig" or "tsoding". Default to "perrig".
+ * @param scale How "zoomed in" the randomart is, default to 2.0. 
  * @returns A randomart image bitmap, can be drawn to a canvas.
  */
 export function randomart(
     x : number,
     y : number,
     seed: string = "default",
+    grammar_name : "perrig" | "tsoding" | "oswald" = "tsoding",
     depth : number = 15,
-    grammar_name : "perrig" | "tsoding" | "oswald" = "perrig",
+    scale : number = 2.0,
     debug : boolean = false
 ) : ImageBitmap {
     const g = GRAMMARS.get(grammar_name);
@@ -422,6 +430,6 @@ export function randomart(
         console.info("Randomart expression used for generation:", expression);
     }
     let glsl_code = frag_shader_template.replace("EXPRESSION", expression);
-    let image = draw_image(glsl_code, x, y);
+    let image = draw_image(glsl_code, x, y, scale);
     return image;
 }
