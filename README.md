@@ -23,7 +23,8 @@ const canvas = document.getElementById('canvas');
 const ctx = canvas1.getContext('2d');
 const seed = "my seed"
 const image = randomart(canvas.width, canvas.height, seed);
-ctx.drawImage(bitmap1, 0, 0, canvas1.width, canvas1.height);
+ctx.drawImage(image, 0, 0, canvas1.width, canvas1.height);
+image.close();
 ```
 
 ### Optional Parameters
