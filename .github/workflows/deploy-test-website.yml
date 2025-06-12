@@ -21,6 +21,13 @@ jobs:
 
       - name: Build the project
         run: npm run build
+      
+      - name: Check for the existence of the build directory
+        run: |
+          if [ ! -d "dist" ]; then
+            echo "Build directory 'dist' does not exist. Exiting."
+            exit 1
+          fi
         
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v4
@@ -28,3 +35,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           allow_empty_commit: true
+          exclude_assets: ''
