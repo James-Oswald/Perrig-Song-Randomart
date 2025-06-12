@@ -11,6 +11,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             const input = document.getElementById('inputText');
             const range = document.getElementById('inputRange');
+            const scaleRange = document.getElementById('scaleRange');
             const canvas1 = document.getElementById('artCanvas1');
             const ctx1 = canvas1.getContext('2d');
             const canvas2 = document.getElementById('artCanvas2');
@@ -20,11 +21,11 @@
 
             function generate(){
                 console.info("Input changed, generating random art.");
-                const bitmap1 = randomart(canvas1.width, canvas1.height, input.value, range.value, "perrig");
+                const bitmap1 = randomart(canvas1.width, canvas1.height, input.value, "perrig", range.value, scaleRange.value);
                 ctx1.drawImage(bitmap1, 0, 0, canvas1.width, canvas1.height);
-                const bitmap2 = randomart(canvas2.width, canvas2.height, input.value, range.value, "tsoding");
+                const bitmap2 = randomart(canvas2.width, canvas2.height, input.value, "tsoding", range.value, scaleRange.value);
                 ctx2.drawImage(bitmap2, 0, 0, canvas2.width, canvas2.height);
-                const bitmap3 = randomart(canvas3.width, canvas3.height, input.value, range.value, "oswald");
+                const bitmap3 = randomart(canvas3.width, canvas3.height, input.value, "oswald", range.value, scaleRange.value);
                 ctx3.drawImage(bitmap3, 0, 0, canvas3.width, canvas3.height);
                 bitmap1.close();
                 bitmap2.close();
@@ -39,6 +40,13 @@
 
             range.addEventListener('input', (event) => {
                 console.info("Range input changed to:", event.target.value);
+                document.getElementById('depthValue').textContent = range.value;
+                generate();
+            });
+
+            scaleRange.addEventListener('input', (event) => {
+                console.info("Scale range input changed to:", event.target.value);
+                document.getElementById('scaleValue').textContent = scaleRange.value;
                 generate();
             });
 
@@ -53,7 +61,13 @@
     <canvas id="artCanvas2" width="500" height="500"></canvas>
     <canvas id="artCanvas3" width="500" height="500"></canvas>
     <br/>
+    <p> Seed: </p>
     <input type="text" id="inputText" value="adc" placeholder="Enter text for random art"/>
+    <p> Depth:</p>
     <input type="range" id="inputRange" min="1" max="30" value="15"/>
+    <span id="depthValue">15</span>
+    <p> Scale:</p>
+    <input type="range" id="scaleRange" min="1" max="100" value="2"/>
+    <span id="scaleValue">2</span>
 </body>
 </html>
