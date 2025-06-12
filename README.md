@@ -1,5 +1,5 @@
 
-#Perrig-Song-Randomart
+# Perrig-Song-Randomart
 
 This package provides a (browser side) js module to generate randomart images
 based on Perrig and Song's 1999 paper ["Hash Visualization: a New Technique to
