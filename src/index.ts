@@ -49,7 +49,7 @@ function addRule(grammar : Grammar, name : string, members : RuleMember[]) : voi
 }
 
 // Generates the example grammar Perrig uses in Perrig Song 1999. 
-function perrig_grammar() : Grammar {
+function perrig_grammar_gen() : Grammar {
 
     const grammar: Grammar = {
         rules: new Map(),
@@ -77,7 +77,7 @@ function perrig_grammar() : Grammar {
 
 // Time free subset of the TSoding grammar
 // https://github.com/tsoding/randomart/blob/main/grammar.bnf
-function tsoding_grammar() : Grammar {
+function tsoding_grammar_gen() : Grammar {
     const grammar: Grammar = {
         rules: new Map(),
         expression: "E"
@@ -93,10 +93,11 @@ function tsoding_grammar() : Grammar {
     ]);
 
     addRule(grammar, "C", [
-        { name: "A", args_types: ["A"], weight: 0.25, glsl_func_name: "A" },
-        { name: "add", args_types: ["C", "C"], weight: 0.25, glsl_func_name: "add" },
-        { name: "mul", args_types: ["C", "C"], weight: 0.25, glsl_func_name: "mul" },
-        { name: "sqrt", args_types: ["C"], weight: 0.25, glsl_func_name: "sqrt_abs" },
+        { name: "A", args_types: ["A"], weight: 0.2, glsl_func_name: "A" },
+        { name: "add", args_types: ["C", "C"], weight: 0.2, glsl_func_name: "add" },
+        { name: "mul", args_types: ["C", "C"], weight: 0.2, glsl_func_name: "mul" },
+        { name: "sqrt", args_types: ["C"], weight: 0.2, glsl_func_name: "sqrt_abs" },
+        { name: "sin", args_types: ["C"], weight: 0.2, glsl_func_name: "csin"}
     ]);
 
     addRule(grammar, "E", [
@@ -105,6 +106,45 @@ function tsoding_grammar() : Grammar {
 
     return grammar;
 }
+
+function oswald_grammar_gen() : Grammar {
+    const grammar: Grammar = {
+        rules: new Map(),
+        expression: "E"
+    };
+
+    addRule(grammar, "A", [
+        { name: "a", args_types: [], weight: 0.20, glsl_func_name: "get_a" },
+        { name: "x", args_types: [], weight: 0.16, glsl_func_name: "get_x" },
+        { name: "y", args_types: [], weight: 0.16, glsl_func_name: "get_y" },
+        { name: "abs_x", args_types: [], weight: 0.16, glsl_func_name: "get_abs_x" },
+        { name: "abs_y", args_types: [], weight: 0.16, glsl_func_name: "get_abs_y" },
+        { name: "distance", args_types: [], weight: 0.16, glsl_func_name: "get_distance" }
+    ]);
+
+    addRule(grammar, "C", [
+        { name: "A", args_types: ["A"], weight: 0.125, glsl_func_name: "A" },
+        { name: "add", args_types: ["C", "C"], weight: 0.125, glsl_func_name: "add" },
+        { name: "mul", args_types: ["C", "C"], weight: 0.125, glsl_func_name: "mul" },
+        { name: "sqrt", args_types: ["C"], weight: 0.125, glsl_func_name: "sqrt_abs" },
+        { name: "sin", args_types: ["C"], weight: 0.125, glsl_func_name: "csin"},
+        { name: "cos", args_types: ["C"], weight: 0.125, glsl_func_name: "ccos"},
+        { name: "tan", args_types: ["C"], weight: 0.125, glsl_func_name: "ctan"},
+        { name: "refl", args_types: ["C"], weight: 0.125, glsl_func_name: "refl"},
+    ]);
+
+    addRule(grammar, "E", [
+        { name: "E", args_types: ["C", "C", "C"], weight: 1, glsl_func_name: "E" }
+    ]);
+
+    return grammar;
+}
+
+const GRAMMARS : Map<string, Grammar> = new Map([
+    ["perrig", perrig_grammar_gen()],
+    ["tsoding", tsoding_grammar_gen()],
+    ["oswald", oswald_grammar_gen()],
+]);
 
 // Random number gen utility functions =========================================
 
@@ -150,10 +190,6 @@ function pickWeightedRule(rules: RuleMember[], rng: () => number): RuleMember {
     throw new Error("Unreachable");
 }
 
-function random_int(min: number, max: number, rng: () => number): number {
-    return Math.floor(rng() * (max - min + 1)) + min;
-}
-
 function random_float(min: number, max: number, rng: () => number): number {
     return rng() * (max - min) + min;
 }
@@ -175,29 +211,49 @@ let frag_shader_template : string = `
 #version 100
 
 precision highp float;
+uniform vec2 resolution;
+
+#define M_PI 3.1415926535897932384626433832795
+#define SCALE 2.0
 
 float get_x() {
-    return gl_FragCoord.x*2.0 - 1.0;
+    return (gl_FragCoord.x/resolution.x)*2.0*SCALE - SCALE;
 }
 
 float get_y() {
-    return gl_FragCoord.y*2.0 - 1.0;
+    return (gl_FragCoord.y/resolution.y)*2.0*SCALE - SCALE;
 }
 
 float get_abs_x() {
-    return abs(gl_FragCoord.x*2.0 - 1.0);
+    return abs(get_x());
 }
 
 float get_abs_y() {
-    return abs(gl_FragCoord.y*2.0 - 1.0);
+    return abs(get_y());
 }
 
 float get_distance() {
-    return length(vec2(gl_FragCoord.x*2.0 - 1.0, gl_FragCoord.y*2.0 - 1.0));
+    return length(vec2(get_x(), get_y()));
+}
+
+float csin(float a) {
+    return sin(a * M_PI);
+}
+
+float ccos(float a) {
+    return cos(a * M_PI);
+}
+
+float ctan(float a) {
+    return tan(a * M_PI);
+}
+
+float refl(float a) {
+    return a;
 }
 
 float add(float a, float b) {
-    return a + b;
+    return min(a + b, 1.0);
 }
 
 float mul(float a, float b) {
@@ -213,7 +269,7 @@ float A(float a) {
 }
 
 vec4 E(float c1, float c2, float c3) {
-    return vec4(c1 / 255.0, c2 / 255.0, c3 / 255.0, 1.0);
+    return vec4(c1, c2, c3, 1.0);
 }
 
 void main() {
@@ -242,17 +298,43 @@ function createShader(
 
 // Randomart Generation ========================================================
 
+// Cache support for offscreen canvases and contexts.
+// The overwhelming majority of the time, the size of the randomart
+// will be the same, so we can cache the offscreen canvas and context for a
+// dimension pair. This prevents annoying WebGL context loss warnings on Firefox
+const canvas_cache = new Map<string, OffscreenCanvas>();
+const context_cache = new Map<string, WebGL2RenderingContext>();
+
 // Given a fragment shader, generate an image bitmap from it, on a fullscreen 
 // quad of a given size.
-function genImage(frag_shader_code : string, x : number, y : number) 
+function draw_image(frag_shader_code : string, x : number, y : number) 
 : ImageBitmap  {
-    let canvas : OffscreenCanvas = new OffscreenCanvas(x, y);
-    let gl = canvas.getContext("webgl2");
-    if (!gl) {
-        throw new Error("WebGL2 context not available.");
+    if (x <= 0 || y <= 0) {
+        throw new Error("Width and height must be positive integers.");
     }
+
+    // Check if we have a cached offscreen canvas for this size
+    const cache_key: string = `${x}x${y}`;
+    let canvas : OffscreenCanvas;
+    let gl : WebGL2RenderingContext;
+
+    if (canvas_cache.has(cache_key)) {
+        canvas = canvas_cache.get(cache_key)!;
+        gl = context_cache.get(cache_key)!;
+    } else {
+        // Create a new offscreen canvas and cache it
+        canvas = new OffscreenCanvas(x, y);
+        canvas_cache.set(cache_key, canvas);
+        const ctx = canvas.getContext("webgl2");
+        if (!ctx) {
+            throw new Error("WebGL2 context not available.");
+        }
+        gl = ctx;
+        context_cache.set(cache_key, gl);
+    }
+
     gl.viewport(0, 0, canvas.width, canvas.height);
-    const shader_program = gl.createProgram(); 
+    const shader_program = gl.createProgram();
     if (!shader_program) {
         throw new Error("Failed to create shader program.");
     }
@@ -265,6 +347,10 @@ function genImage(frag_shader_code : string, x : number, y : number)
     if (!gl.getProgramParameter(shader_program, gl.LINK_STATUS)){
         const info = gl.getProgramInfoLog(shader_program);
         throw `Could not compile WebGL program. \n\n${info}`;
+    }
+    const resolution_uniform = gl.getUniformLocation(shader_program, "resolution");
+    if (!resolution_uniform) {
+        throw new Error("Could not find resolution uniform in shader program.");
     }
     let fullscreen_quad = [
         1.0,  1.0, -1.0,  1.0, -1.0, -1.0,
@@ -279,7 +365,8 @@ function genImage(frag_shader_code : string, x : number, y : number)
     gl.useProgram(shader_program);
     gl.bindBuffer(gl.ARRAY_BUFFER, fullscreen_quad_vbo);
     gl.enableVertexAttribArray(position_attribute);
-    gl.vertexAttribPointer(position_attribute, 2, gl.FLOAT, false, 0, 0); 
+    gl.vertexAttribPointer(position_attribute, 2, gl.FLOAT, false, 0, 0);
+    gl.uniform2f(resolution_uniform, canvas.width, canvas.height);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
 
     return canvas.transferToImageBitmap();
@@ -295,7 +382,7 @@ function randomart_aux(g: Grammar, i : string, d: number, rng : () => number): s
     let a = pickWeightedRule(d <= 0 ? A : r , rng);
     if (!a) {throw new Error(`No rule found for ${i} in grammar.`);}
     if (a.args_types.length == 0) {
-        return a.name == "a" ? random_float(-1, 1, rng) + "" : a.glsl_func_name + "()";
+        return a.name == "a" ? random_float(0, 1, rng) + "" : a.glsl_func_name + "()";
     } else {
         while (d >= 0 && rng() < 0.5) {d--;}
         let args = a.args_types.map((t) => randomart_aux(g, t, d - 1, rng));
@@ -304,7 +391,7 @@ function randomart_aux(g: Grammar, i : string, d: number, rng : () => number): s
 }
 
 /**
- * 
+ * Generates a randomart image bitmap of given a width, height, depth, and seed.
  * @param x the width of the randomart image in pixels
  * @param y the height of the randomart image in pixels
  * @param depth The "complexity" of the randomart, default to 15. WARNING: this
@@ -322,16 +409,19 @@ export function randomart(
     y : number,
     seed: string = "default",
     depth : number = 15,
-    grammar : "perrig" | "tsoding" = "perrig",
+    grammar_name : "perrig" | "tsoding" | "oswald" = "perrig",
     debug : boolean = false
 ) : ImageBitmap {
-    let g = grammar == "tsoding" ? tsoding_grammar() : perrig_grammar();
-    let rng = mulberry32(seed);
+    const g = GRAMMARS.get(grammar_name);
+    if (!g) {
+        throw new Error(`Grammar ${grammar_name} not found.`);
+    }
+    const rng = mulberry32(seed);
     let expression = randomart_aux(g, g.expression, depth, rng);
     if (debug) {
         console.info("Randomart expression used for generation:", expression);
     }
     let glsl_code = frag_shader_template.replace("EXPRESSION", expression);
-    let image = genImage(glsl_code, x, y);
+    let image = draw_image(glsl_code, x, y);
     return image;
 }
