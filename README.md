@@ -20,10 +20,10 @@ given an image size, string seed, and a slew of other optional parameters will g
 From [the example website](https://github.com/James-Oswald/Perrig-Song-Randomart/blob/main/index.html)
 ```js
 const canvas = document.getElementById('canvas');
-const ctx = canvas1.getContext('2d');
+const ctx = canvas.getContext('2d');
 const seed = "my seed"
 const image = randomart(canvas.width, canvas.height, seed);
-ctx.drawImage(image, 0, 0, canvas1.width, canvas1.height);
+ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 image.close();
 ```
 
