@@ -10,6 +10,7 @@
  * The grammar is based on the Perrig Song 1999 paper and
  * the TSoding's implementation of Perrig-Song.
  */
+export const grammarNames = ["perrig", "tsoding", "oswald"];
 // Adds a rule to a grammar, and makes sure it follows
 // the rules, weights add to 1, its not already defined
 function addRule(grammar, name, members) {
@@ -150,7 +151,7 @@ function random_float(min, max, rng) {
     return rng() * (max - min) + min;
 }
 // GLSL code ===================================================================
-let vertex_shader_code = `
+const vertex_shader_code = `
 #version 100
 
 attribute vec3 position;
@@ -160,7 +161,7 @@ void main()
     gl_Position = vec4(position.x, position.y, 0, 1.0);
 }
 `;
-let frag_shader_template = `
+const frag_shader_template = `
 #version 100
 
 precision highp float;
@@ -295,13 +296,13 @@ function draw_image(frag_shader_code, x, y, scale) {
     if (!resolution_uniform) {
         throw new Error("Could not find resolution uniform in shader program.");
     }
-    let fullscreen_quad = [
+    const fullscreen_quad = [
         1.0, 1.0, -1.0, 1.0, -1.0, -1.0,
         -1.0, -1.0, 1.0, -1.0, 1.0, 1.0
     ];
     gl.bindBuffer(gl.ARRAY_BUFFER, fullscreen_quad_vbo);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(fullscreen_quad), gl.STATIC_DRAW);
-    let position_attribute = gl.getAttribLocation(shader_program, "position");
+    const position_attribute = gl.getAttribLocation(shader_program, "position");
     // Draw the shader
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.useProgram(shader_program);
@@ -315,15 +316,15 @@ function draw_image(frag_shader_code, x, y, scale) {
 }
 // Given the grammar and a depth parameter, generate a GLSL shader. 
 function randomart_aux(g, i, d, rng) {
-    let r = g.rules.get(i);
-    let A = g.rules.get("A");
+    const r = g.rules.get(i);
+    const A = g.rules.get("A");
     if (!A) {
         throw new Error("Rule A not found in grammar.");
     }
     if (!r) {
         throw new Error(`Rule ${i} not found in grammar.`);
     }
-    let a = pickWeightedRule(d <= 0 ? A : r, rng);
+    const a = pickWeightedRule(d <= 0 ? A : r, rng);
     if (!a) {
         throw new Error(`No rule found for ${i} in grammar.`);
     }
@@ -334,37 +335,119 @@ function randomart_aux(g, i, d, rng) {
         while (d >= 0 && rng() < 0.5) {
             d--;
         }
-        let args = a.args_types.map((t) => randomart_aux(g, t, d - 1, rng));
+        const args = a.args_types.map((t) => randomart_aux(g, t, d - 1, rng));
         return a.glsl_func_name + "(" + args.join(", ") + ")";
     }
 }
-/**
- * Generates a randomart image bitmap of given a width, height, depth, and seed.
- * @param x the width of the randomart image in pixels
- * @param y the height of the randomart image in pixels
- * @param seed The seed string used to generate the random art,
- * default to "default".
- * @param grammar_name The grammar to use for generating the randomart, either
- * "perrig", "tsoding", or "oswald". Default to "tsoding".
- * @param depth The "complexity" of the randomart, default to 15. WARNING: this
- * is an exponential parameter, higher values will cause potentially very long
- * generation times, and have a know issue corrupting WebGL on Firefox, requiring
- * a browser restart.
- * @param scale How "zoomed in" the randomart is, default to 2.0.
- * @returns A randomart image bitmap, can be drawn to a canvas.
- */
-export function randomart(x, y, seed = "default", grammar_name = "tsoding", depth = 15, scale = 2.0, debug = false) {
+function getGrammar(grammar_name) {
     const g = GRAMMARS.get(grammar_name);
     if (!g) {
         throw new Error(`Grammar ${grammar_name} not found.`);
     }
+    return g;
+}
+function normalizeOptions(widthOrOptions, height, seed = "default", grammar = "tsoding", depth = 15, scale = 2.0, debug = false) {
+    if (typeof widthOrOptions === "object") {
+        return {
+            width: widthOrOptions.width,
+            height: widthOrOptions.height,
+            seed: widthOrOptions.seed ?? "default",
+            grammar: widthOrOptions.grammar ?? "tsoding",
+            depth: widthOrOptions.depth ?? 15,
+            scale: widthOrOptions.scale ?? 2.0,
+            debug: widthOrOptions.debug ?? false
+        };
+    }
+    if (height === undefined) {
+        throw new Error("Height is required when calling randomart with positional arguments.");
+    }
+    return {
+        width: widthOrOptions,
+        height,
+        seed,
+        grammar,
+        depth,
+        scale,
+        debug
+    };
+}
+function nextTask() {
+    return new Promise((resolve) => {
+        setTimeout(resolve, 0);
+    });
+}
+function normalizeConcurrency(concurrency, itemCount) {
+    if (itemCount === 0) {
+        return 0;
+    }
+    if (concurrency === undefined) {
+        return itemCount;
+    }
+    if (!Number.isFinite(concurrency) || concurrency < 1) {
+        throw new Error("Concurrency must be a positive number.");
+    }
+    return Math.min(Math.floor(concurrency), itemCount);
+}
+/**
+ * Generates the GLSL expression used to render randomart. This is useful for
+ * debugging, caching, or rendering the expression with your own WebGL pipeline.
+ */
+export function createRandomartExpression(options = {}) {
+    const seed = options.seed ?? "default";
+    const grammar = options.grammar ?? "tsoding";
+    const depth = options.depth ?? 15;
     const rng = mulberry32(seed);
-    let expression = randomart_aux(g, g.expression, depth, rng);
-    if (debug) {
+    const selectedGrammar = getGrammar(grammar);
+    const expression = randomart_aux(selectedGrammar, selectedGrammar.expression, depth, rng);
+    if (options.debug) {
         console.info("Randomart expression used for generation:", expression);
     }
-    let glsl_code = frag_shader_template.replace("EXPRESSION", expression);
-    let image = draw_image(glsl_code, x, y, scale);
-    return image;
+    return expression;
+}
+/**
+ * Generates a complete fragment shader for a seeded randomart image.
+ */
+export function createRandomartFragmentShader(options = {}) {
+    return frag_shader_template.replace("EXPRESSION", createRandomartExpression(options));
+}
+export function randomart(widthOrOptions, height, seed = "default", grammar_name = "tsoding", depth = 15, scale = 2.0, debug = false) {
+    const options = normalizeOptions(widthOrOptions, height, seed, grammar_name, depth, scale, debug);
+    const glsl_code = createRandomartFragmentShader({
+        seed: options.seed,
+        grammar: options.grammar,
+        depth: options.depth,
+        debug: options.debug
+    });
+    return draw_image(glsl_code, options.width, options.height, options.scale);
+}
+/**
+ * Generates randomart image bitmaps for a list of seed strings.
+ *
+ * The returned list preserves the input seed order. Work is scheduled across
+ * separate browser tasks so UI handlers can await a batch without one large
+ * synchronous loop monopolizing the event loop.
+ */
+export async function randomarts(options) {
+    const results = new Array(options.seeds.length);
+    let nextIndex = 0;
+    const workerCount = normalizeConcurrency(options.concurrency, options.seeds.length);
+    async function worker() {
+        while (nextIndex < options.seeds.length) {
+            const index = nextIndex;
+            nextIndex++;
+            await nextTask();
+            results[index] = randomart({
+                width: options.width,
+                height: options.height,
+                seed: options.seeds[index],
+                grammar: options.grammar,
+                depth: options.depth,
+                scale: options.scale,
+                debug: options.debug
+            });
+        }
+    }
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    return results;
 }
 //# sourceMappingURL=index.js.map

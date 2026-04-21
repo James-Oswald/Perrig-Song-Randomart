@@ -21,11 +21,34 @@
 
             function generate(){
                 console.info("Input changed, generating random art.");
-                const bitmap1 = randomart(canvas1.width, canvas1.height, input.value, "perrig", range.value, scaleRange.value);
+                const depth = Number(range.value);
+                const scale = Number(scaleRange.value);
+                const bitmap1 = randomart({
+                    width: canvas1.width,
+                    height: canvas1.height,
+                    seed: input.value,
+                    grammar: "perrig",
+                    depth,
+                    scale
+                });
                 ctx1.drawImage(bitmap1, 0, 0, canvas1.width, canvas1.height);
-                const bitmap2 = randomart(canvas2.width, canvas2.height, input.value, "tsoding", range.value, scaleRange.value);
+                const bitmap2 = randomart({
+                    width: canvas2.width,
+                    height: canvas2.height,
+                    seed: input.value,
+                    grammar: "tsoding",
+                    depth,
+                    scale
+                });
                 ctx2.drawImage(bitmap2, 0, 0, canvas2.width, canvas2.height);
-                const bitmap3 = randomart(canvas3.width, canvas3.height, input.value, "oswald", range.value, scaleRange.value);
+                const bitmap3 = randomart({
+                    width: canvas3.width,
+                    height: canvas3.height,
+                    seed: input.value,
+                    grammar: "oswald",
+                    depth,
+                    scale
+                });
                 ctx3.drawImage(bitmap3, 0, 0, canvas3.width, canvas3.height);
                 bitmap1.close();
                 bitmap2.close();
