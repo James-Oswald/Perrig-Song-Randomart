@@ -59,16 +59,47 @@ import {
   createRandomartFragmentShader,
   grammarNames,
   randomart,
+  randomarts,
   type GrammarName,
   type RandomartOptions,
+  type RandomartsOptions,
   type RandomartShaderOptions
 } from "perrig-song-randomart";
 ```
 
 - `randomart(options)` renders an `ImageBitmap`.
+- `randomarts(options)` renders one `ImageBitmap` for each seed string.
 - `createRandomartExpression(options)` returns the generated GLSL expression.
 - `createRandomartFragmentShader(options)` returns the full fragment shader source.
 - `grammarNames` lists the supported grammar names.
+
+### Batch generation
+
+Use `randomarts` when a UI needs to render many seeded images from a list of
+strings. It returns a promise for `ImageBitmap[]` in the same order as the input
+`seeds`.
+
+```js
+import { randomarts } from "perrig-song-randomart";
+
+const seeds = ["alice@example.com", "bob@example.com", "carol@example.com"];
+const images = await randomarts({
+  width: 256,
+  height: 256,
+  seeds,
+  grammar: "tsoding",
+  depth: 12,
+  scale: 2,
+  concurrency: 4
+});
+
+images.forEach((image, index) => {
+  const canvas = document.querySelectorAll("canvas")[index];
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  image.close();
+});
+```
 
 ### Optional Parameters
 * `grammar`: The grammar to use for generating the randomart, either `"perrig"`, `"tsoding"`, or `"oswald"`. Defaults to `"tsoding"`.
@@ -81,3 +112,5 @@ WARNING: as this governs the depth of a tree, is an exponential parameter, highe
 generation times, and have a know issue corrupting WebGL on Firefox, requiring a browser restart. 20 is the recommended maximum to avoid lag. 
 * `scale`: How "zoomed out" the randomart is, defaults to 2.0. Some features are not visible at the base zoom, but in general interesting features
 tend to clump up in the middle. Zooming out too far usually results in boring repeated patterns.
+* `concurrency`: Only used by `randomarts`. Controls how many scheduled render
+tasks are active at once. Defaults to the number of seeds.

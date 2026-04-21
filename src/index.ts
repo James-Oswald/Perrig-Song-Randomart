@@ -51,6 +51,17 @@ export interface RandomartShaderOptions {
     debug?: boolean;
 }
 
+export interface RandomartsOptions {
+    width: number;
+    height: number;
+    seeds: readonly string[];
+    grammar?: GrammarName;
+    depth?: number;
+    scale?: number;
+    debug?: boolean;
+    concurrency?: number;
+}
+
 // Adds a rule to a grammar, and makes sure it follows
 // the rules, weights add to 1, its not already defined
 function addRule(grammar : Grammar, name : string, members : RuleMember[]) : void {
@@ -461,6 +472,25 @@ function normalizeOptions(
     };
 }
 
+function nextTask(): Promise<void> {
+    return new Promise((resolve) => {
+        setTimeout(resolve, 0);
+    });
+}
+
+function normalizeConcurrency(concurrency: number | undefined, itemCount: number): number {
+    if (itemCount === 0) {
+        return 0;
+    }
+    if (concurrency === undefined) {
+        return itemCount;
+    }
+    if (!Number.isFinite(concurrency) || concurrency < 1) {
+        throw new Error("Concurrency must be a positive number.");
+    }
+    return Math.min(Math.floor(concurrency), itemCount);
+}
+
 /**
  * Generates the GLSL expression used to render randomart. This is useful for
  * debugging, caching, or rendering the expression with your own WebGL pipeline.
@@ -529,4 +559,37 @@ export function randomart(
         debug: options.debug
     });
     return draw_image(glsl_code, options.width, options.height, options.scale);
+}
+
+/**
+ * Generates randomart image bitmaps for a list of seed strings.
+ *
+ * The returned list preserves the input seed order. Work is scheduled across
+ * separate browser tasks so UI handlers can await a batch without one large
+ * synchronous loop monopolizing the event loop.
+ */
+export async function randomarts(options: RandomartsOptions): Promise<ImageBitmap[]> {
+    const results = new Array<ImageBitmap>(options.seeds.length);
+    let nextIndex = 0;
+    const workerCount = normalizeConcurrency(options.concurrency, options.seeds.length);
+
+    async function worker(): Promise<void> {
+        while (nextIndex < options.seeds.length) {
+            const index = nextIndex;
+            nextIndex++;
+            await nextTask();
+            results[index] = randomart({
+                width: options.width,
+                height: options.height,
+                seed: options.seeds[index],
+                grammar: options.grammar,
+                depth: options.depth,
+                scale: options.scale,
+                debug: options.debug
+            });
+        }
+    }
+
+    await Promise.all(Array.from({ length: workerCount }, () => worker()));
+    return results;
 }
